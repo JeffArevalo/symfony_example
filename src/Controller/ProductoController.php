@@ -32,10 +32,19 @@ class ProductoController extends AbstractController
     }
 
     #[Route('', name: 'app_producto_read_all', methods: ['GET'])]
-    public function readAll(EntityManagerInterface $entityManager): JsonResponse
+    public function readAll(EntityManagerInterface $entityManager, Request $request): JsonResponse
     {
-        $productos = $entityManager->getRepository(Producto::class)->findAll();
+        $repositorio = $entityManager->getRepository(Producto::class);
 
+        $limit = $request->get('limit', 5);
+
+        $page = $request->get('page', 1);
+
+        $productos = $repositorio->findAllWithPagination($page, $limit);
+
+        $total = $productos->count();
+
+        $lastPage = (int) ceil($total / $limit);
         $data = [];
 
         foreach ($productos as $producto) {
@@ -47,7 +56,7 @@ class ProductoController extends AbstractController
             ];
         }
 
-        return $this->json($data);
+        return $this->json(['data' => $data, 'total' => $total, 'lastPage' => $lastPage]);
     }
 
     #[Route('/{id}', name: 'app_producto_read_one', methods: ['GET'])]

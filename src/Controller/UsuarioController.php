@@ -40,32 +40,31 @@ class UsuarioController extends AbstractController
     }
 
     #[Route('', name: 'app_usuario_read_all', methods: ['GET'])]
-    public function readAll(EntityManagerInterface $entityManager): JsonResponse
+    public function readAll(EntityManagerInterface $entityManager, Request $request): JsonResponse
     {
-        $usuarios = $entityManager->getRepository(Usuario::class)->findAll();
+        $repositorio = $entityManager->getRepository(Usuario::class);
+
+        $limit = $request->get('limit', 5);
+
+        $page = $request->get('page', 1);
+
+        $usuarios = $repositorio->findAllWithPagination($page, $limit);
+
+        $total = $usuarios->count();
+
+        $lastPage = (int) ceil($total / $limit);
 
         $data = [];
 
         foreach ($usuarios as $usuario) {
-            $id = $usuario->getId();
-            $dir = $entityManager->getRepository(Direccion::class)->findBy(['usuario'=>$id]);
-            $direccion = [];
-            if ($dir == null) {
-                $direccion = [];
-            }else{
-                foreach ($dir as $d) {
-                    array_push($direccion, $d->getDepartamento());
-                }
-            }
             $data[] = [
-                'id' => $id,
+                'id' => $usuario->getId(),
                 'nombre' => $usuario->getNombre(),
                 'edad' => $usuario->getEdad(),
-                'direccion' => $direccion,
             ];
         }
 
-        return $this->json($data);
+        return $this->json(['data' => $data, 'total' => $total, 'lastPage' => $lastPage]);
     }
 
     #[Route('/{id}', name: 'app_usuario_read_one', methods: ['GET'])]
@@ -138,5 +137,23 @@ class UsuarioController extends AbstractController
         $entityManager->flush();
 
         return $this->json(['message' => 'Se elimino el usuario.', 'data' => $data]);
+    }
+
+    #[Route('/inicial_a', name: 'app_usuario_read_all_start_with_a', methods: ['GET'])]
+    public function readAllInicialA(EntityManagerInterface $entityManager, Request $request): JsonResponse
+    {
+        $usuarios = $entityManager->getRepository(Usuario::class)->findUsuariosNombreIniciaA();
+
+        $data = [];
+
+        foreach ($usuarios as $usuario) {
+            $data[] = [
+                'id' => $usuario->getId(),
+                'nombre' => $usuario->getNombre(),
+                'edad' => $usuario->getEdad(),
+            ];
+        }
+
+        return $this->json(['data' => $data]);
     }
 }

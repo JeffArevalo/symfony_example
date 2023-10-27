@@ -38,9 +38,19 @@ class DireccionController extends AbstractController
     }
 
     #[Route('', name: 'app_direccion_read_all', methods: ['GET'])]
-    public function readAll(EntityManagerInterface $entityManager): JsonResponse
+    public function readAll(EntityManagerInterface $entityManager, Request $request): JsonResponse
     {
-        $direccions = $entityManager->getRepository(Direccion::class)->findAll();
+        $repositorio = $entityManager->getRepository(Direccion::class);
+
+        $limit = $request->get('limit', 5);
+
+        $page = $request->get('page', 1);
+
+        $direccions = $repositorio->findAllWithPagination($page, $limit);
+
+        $total = $direccions->count();
+
+        $lastPage = (int) ceil($total / $limit);
 
         $data = [];
 
@@ -52,7 +62,7 @@ class DireccionController extends AbstractController
             ];
         }
 
-        return $this->json($data);
+        return $this->json(['data' => $data, 'total' => $total, 'lastPage' => $lastPage]);
     }
 
     #[Route('/{id}', name: 'app_direccion_read_one', methods: ['GET'])]
